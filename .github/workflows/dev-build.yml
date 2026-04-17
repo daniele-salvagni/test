@@ -1,0 +1,40 @@
+name: Dev Build
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Determine version
+        id: version
+        run: echo "version=$(git describe --tags --always)" >> "$GITHUB_OUTPUT"
+
+      - name: Write VERSION file
+        run: echo "${{ steps.version.outputs.version }}" > VERSION
+
+      - name: Build archive
+        run: |
+          zip -r propeller-${{ steps.version.outputs.version }}.zip . \
+            -x '.git/*' \
+            -x '.github/*' \
+            -x '.venv/*' \
+            -x '.ruff_cache/*' \
+            -x 'research/*' \
+            -x 'tools/*/\.venv/*' \
+            -x 'tools/*/\.ruff_cache/*'
+
+      - name: Create pre-release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "${{ steps.version.outputs.version }}" \
+            propeller-${{ steps.version.outputs.version }}.zip \
+            --title "Dev: ${{ steps.version.outputs.version }}" \
+            --notes "Dev build from branch \`${{ github.ref_name }}\` at ${{ github.sha }}" \
+            --prerelease

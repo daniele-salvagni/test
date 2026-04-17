@@ -1,0 +1,30 @@
+name: Release
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Write VERSION file
+        run: echo "${{ github.ref_name }}" > VERSION
+
+      - name: Build archive
+        run: |
+          zip -r propeller-${{ github.ref_name }}.zip . \
+            -x '.git/*' \
+            -x '.github/*' \
+            -x '.venv/*' \
+            -x '.ruff_cache/*' \
+            -x 'research/*' \
+            -x 'tools/*/\.venv/*' \
+            -x 'tools/*/\.ruff_cache/*'
+
+      - name: Attach to release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: propeller-${{ github.ref_name }}.zip
